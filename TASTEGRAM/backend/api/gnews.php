@@ -9,7 +9,7 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 // --- CONFIGURAZIONE ---
-define('GNEWS_KEY',  '4577cf688b9ba0d673a5cccee2074659');
+define('GNEWS_KEY',  '427f8796ffdcc3964d3dae656ade7019');
 define('GNEWS_BASE', 'https://gnews.io/api/v4');
 
 $action = $_GET['action'] ?? 'food_news';

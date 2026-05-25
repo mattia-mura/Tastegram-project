@@ -180,8 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com'; 
             $mail->SMTPAuth   = true;
-            $mail->Username   = 'mattiamuratore7@gmail.com'; // Inserisci la tua mail
-            $mail->Password   = 'eksd vdtp sndg mgbu';   // La Password per le App (16 lettere)
+            $mail->Username   = 'tastegram67@gmail.com'; // Inserisci la tua mail
+            $mail->Password   = 'codc kbtn ytjg fuqa';   // La Password per le App (16 lettere)
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
             $mail->CharSet    = 'UTF-8';
