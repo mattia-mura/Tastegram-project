@@ -98,7 +98,7 @@ $me = $stmt->fetch();
     <!-- Anteprima profilo -->
     <div class="profile-preview">
         <div class="preview-avatar">
-            <img src="../img/<?= htmlspecialchars($me['avatar_url'] ?: 'default_avatar.png') ?>"
+            <img src="<?= htmlspecialchars(avatarSrc($me['avatar_url'] ?? 'default_avatar.png')) ?>"
                  onerror="this.src='../img/default_avatar.png'" alt="avatar">
         </div>
         <div class="preview-info">

@@ -160,9 +160,9 @@
 -- DELIMITER ;
 
 -- 1. Reset totale (ATTENZIONE: cancella i dati esistenti)
-DROP DATABASE IF EXISTS dbapp;
-CREATE DATABASE dbapp;
-USE dbapp;
+DROP DATABASE IF EXISTS socialapp;
+CREATE DATABASE socialapp;
+USE socialapp;
 
 -- 2. TABELLA UTENTI
 CREATE TABLE users (

@@ -63,30 +63,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isGuest) {
         $commentError = 'Il commento non può essere vuoto.';
     } elseif (mb_strlen($commentText) > 500) {
         $commentError = 'Commento troppo lungo (max 500 caratteri).';
-    // } else {
-    //     $ins = $sql->prepare("
-    //         INSERT INTO comments (post_id, user_id, parent_id, depth, content)
-    //         VALUES (:pid, :uid, :parent, :depth, :content)
-    //     ");
-    //     $ins->execute([
-    //         ':pid'     => $postId,
-    //         ':uid'     => $currentUserId,
-    //         ':parent'  => $parentId,
-    //         ':depth'   => $depth,
-    //         ':content' => $commentText,
-    //     ]);
     } else {
         $ins = $sql->prepare("
-            INSERT INTO comments (post_id, user_id, parent_id, content)
-            VALUES (:pid, :uid, :parent, :content)
+            INSERT INTO comments (post_id, user_id, parent_id, depth, content)
+            VALUES (:pid, :uid, :parent, :depth, :content)
         ");
         $ins->execute([
             ':pid'     => $postId,
             ':uid'     => $currentUserId,
             ':parent'  => $parentId,
+            ':depth'   => $depth,
             ':content' => $commentText,
         ]);
-        
+
         // Notifica all'autore del post (se non è il proprio)
         if ($post['user_id'] !== $currentUserId) {
             $sql->prepare("
@@ -100,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isGuest) {
     }
 }
 
-$avatar = $post['avatar_url'] ?: 'default_avatar.png';
+$avatar = $post['avatar_url'] ?? 'default_avatar.png';
 
 function timeAgo(string $dt): string {
     $diff = time() - strtotime($dt);
@@ -308,7 +297,7 @@ function timeAgo(string $dt): string {
     <!-- Header autore -->
     <div class="post-header">
         <div class="post-avatar">
-            <img src="../img/<?= htmlspecialchars($avatar) ?>"
+            <img src="<?= htmlspecialchars(avatarSrc($avatar)) ?>"
                  onerror="this.src='../img/default_avatar.png'"
                  alt="@<?= htmlspecialchars($post['username']) ?>">
         </div>
@@ -380,7 +369,7 @@ function timeAgo(string $dt): string {
                 <!-- Commento root -->
                 <div class="comment" id="comment-<?= $c['id'] ?>">
                     <div class="comment-avatar">
-                        <img src="../img/<?= htmlspecialchars($c['avatar_url'] ?: 'default_avatar.png') ?>"
+                        <img src="<?= htmlspecialchars(avatarSrc($c['avatar_url'] ?? 'default_avatar.png')) ?>"
                              onerror="this.src='../img/default_avatar.png'"
                              alt="@<?= htmlspecialchars($c['username']) ?>">
                     </div>
@@ -406,7 +395,7 @@ function timeAgo(string $dt): string {
                     <?php foreach ($replies[$rootId] as $r): ?>
                     <div class="comment reply" id="comment-<?= $r['id'] ?>">
                         <div class="comment-avatar">
-                            <img src="../img/<?= htmlspecialchars($r['avatar_url'] ?: 'default_avatar.png') ?>"
+                            <img src="<?= htmlspecialchars(avatarSrc($r['avatar_url'] ?? 'default_avatar.png')) ?>"
                                  onerror="this.src='../img/default_avatar.png'"
                                  alt="@<?= htmlspecialchars($r['username']) ?>">
                         </div>
@@ -433,7 +422,7 @@ function timeAgo(string $dt): string {
 <?php if (!$isGuest): ?>
 <div class="comment-form-bar">
     <div class="comment-avatar-sm">
-        <img src="../img/<?= htmlspecialchars($currentAvatar) ?>"
+        <img src="<?= htmlspecialchars(avatarSrc($currentAvatar)) ?>"
              onerror="this.src='../img/default_avatar.png'"
              alt="tu">
     </div>

@@ -27,10 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $check = $sql->prepare("SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?");
         $check->execute([$newUsername, $newEmail, $currentUserId]);
         if ($check->fetch()) {
-            $error = 'Username o email già in uso da un altro account.';
+            $error = 'Username o email già in uso.';
         } else {
-            // Upload avatar
-            if (!empty($_FILES['avatar']['name'])) {
+
+            // ── UPLOAD AVATAR ──
+            if (!empty($_FILES['avatar']['name']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
                 $file     = $_FILES['avatar'];
                 $allowed  = ['image/jpeg', 'image/png', 'image/webp'];
                 $finfo    = finfo_open(FILEINFO_MIME_TYPE);
@@ -44,33 +45,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                     $filename = 'avatar_' . $currentUserId . '_' . time() . '.' . $ext;
-                    // Path assoluto dalla root del progetto su XAMPP
-                    $dest = $_SERVER['DOCUMENT_ROOT'] . '/tastegram/img/uploads/avatars/' . $filename;
 
-                    if (move_uploaded_file($file['tmp_name'], $dest)) {
-                        // Elimina vecchio avatar (se non è il default)
+                    // Path assoluto robusto su XAMPP
+                    $uploadDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . '/tastegram/img/uploads/avatars/';
+
+                    // Crea cartella se non esiste
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
+                    if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+                        // Elimina vecchio avatar se non è il default
                         if ($user['avatar_url'] !== 'default_avatar.png') {
-                            $old = $_SERVER['DOCUMENT_ROOT'] . '/tastegram/img/uploads/avatars/' . $user['avatar_url'];
-                            if (file_exists($old)) unlink($old);
+                            $oldFile = $uploadDir . $user['avatar_url'];
+                            if (file_exists($oldFile)) unlink($oldFile);
                         }
                         $newAvatar = $filename;
                     } else {
-                        $error = 'Errore caricamento foto. Controlla i permessi di img/uploads/avatars/';
+                        $error = 'Errore caricamento. Verifica i permessi della cartella img/uploads/avatars/';
                     }
                 }
+            } elseif (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $phpErrors = [
+                    UPLOAD_ERR_INI_SIZE  => 'File troppo grande (php.ini).',
+                    UPLOAD_ERR_FORM_SIZE => 'File troppo grande.',
+                    UPLOAD_ERR_PARTIAL   => 'Upload incompleto.',
+                    UPLOAD_ERR_CANT_WRITE => 'Impossibile scrivere su disco.',
+                ];
+                $error = $phpErrors[$_FILES['avatar']['error']] ?? 'Errore upload.';
             }
 
             if (empty($error)) {
                 $sql->prepare("UPDATE users SET username=?, email=?, bio=?, avatar_url=? WHERE id=?")
                     ->execute([$newUsername, $newEmail, $newBio, $newAvatar, $currentUserId]);
 
+                // Aggiorna sessione
                 $_SESSION['username']   = $newUsername;
                 $_SESSION['avatar_url'] = $newAvatar;
                 $currentUsername = $newUsername;
                 $currentAvatar   = $newAvatar;
-                $success = 'Profilo aggiornato!';
 
-                // Ricarica dati
+                $success = 'Profilo aggiornato con successo!';
+
+                // Ricarica dati aggiornati dal DB
                 $stmt = $sql->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
                 $stmt->execute([$currentUserId]);
                 $user = $stmt->fetch();
@@ -78,6 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+// Timestamp per cache busting sull'avatar
+$avatarTs = time();
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -110,27 +130,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
         .success-box {
             background: #f0fdf4; color: #166534; padding: 12px 16px;
-            border-radius: 12px; font-size: 13px; margin-bottom: 20px;
-            border: 1px solid #bbf7d0;
+            border-radius: 12px; font-size: 13px; margin-bottom: 20px; border: 1px solid #bbf7d0;
         }
         .error-box {
             background: #fff1f0; color: #d85140; padding: 12px 16px;
-            border-radius: 12px; font-size: 13px; margin-bottom: 20px;
-            border: 1px solid #ffa39e;
+            border-radius: 12px; font-size: 13px; margin-bottom: 20px; border: 1px solid #ffa39e;
         }
         .avatar-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 28px; }
         .avatar-wrap {
             width: 96px; height: 96px; border-radius: 50%; overflow: hidden;
             border: 3px solid var(--or); position: relative; cursor: pointer; margin-bottom: 8px;
         }
-        .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .avatar-overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.38);
+            position: absolute; inset: 0; background: rgba(0,0,0,0.4);
             display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity .2s; font-size: 24px;
+            opacity: 0; transition: opacity .2s; font-size: 26px;
         }
         .avatar-wrap:hover .avatar-overlay { opacity: 1; }
-        .avatar-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .avatar-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
         .avatar-hint { font-size: 12px; color: #999; }
         .section-title {
             font-size: 12px; font-weight: 700; text-transform: uppercase;
@@ -139,8 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .form-group { margin-bottom: 16px; }
         .form-group label {
-            display: block; font-size: 12px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: .5px; color: var(--br); margin-bottom: 8px;
+            display: block; font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .5px; color: var(--br); margin-bottom: 8px;
         }
         .form-group input, .form-group textarea {
             width: 100%; padding: 13px 16px; border: 2px solid #f0f0f0;
@@ -151,12 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             outline: none; border-color: var(--or); background: var(--cr);
         }
         .form-group textarea { height: 100px; resize: none; line-height: 1.6; }
-        /* Link a cambia password - ben separato */
         .change-pw-link {
-            display: block; text-align: center; margin-top: 24px;
-            padding: 12px; border-radius: 12px; border: 1.5px solid #eee;
-            color: #666; text-decoration: none; font-size: 14px; font-weight: 500;
-            transition: background .2s;
+            display: block; text-align: center; margin-top: 24px; padding: 12px;
+            border-radius: 12px; border: 1.5px solid #eee; color: #666;
+            text-decoration: none; font-size: 14px; font-weight: 500; transition: all .2s;
         }
         .change-pw-link:hover { background: var(--cr); border-color: var(--or); color: var(--tc); }
     </style>
@@ -178,15 +194,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form id="edit-form" method="POST" enctype="multipart/form-data">
 
+        <!-- Avatar con cache busting sul src -->
         <div class="avatar-section">
             <div class="avatar-wrap">
+                <?php
+                $avatarFile = $user['avatar_url'] ?: 'default_avatar.png';
+                // Se è il default sta in /img/, altrimenti in /img/uploads/avatars/
+                $avatarSrc = ($avatarFile === 'default_avatar.png')
+                    ? '../img/default_avatar.png'
+                    : '../img/uploads/avatars/' . $avatarFile . '?v=' . $avatarTs;
+                ?>
                 <img id="avatar-preview"
-                     src="../img/<?= htmlspecialchars($user['avatar_url'] ?: 'default_avatar.png') ?>"
-                     onerror="this.src='../img/default_avatar.png'" alt="Avatar">
+                     src="<?= htmlspecialchars($avatarSrc) ?>"
+                     onerror="this.src='../img/default_avatar.png'"
+                     alt="Avatar">
                 <div class="avatar-overlay">📷</div>
-                <input type="file" name="avatar" id="avatar-input" accept="image/jpeg,image/png,image/webp">
+                <input type="file" name="avatar" id="avatar-input"
+                       accept="image/jpeg,image/png,image/webp">
             </div>
-            <span class="avatar-hint">Tocca per cambiare la foto profilo</span>
+            <span class="avatar-hint">Tocca per cambiare la foto profilo · max 2MB</span>
         </div>
 
         <div class="section-title">Informazioni profilo</div>
@@ -211,9 +237,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </form>
 
-    <!-- Link a pagina separata per la password — NO logout qui -->
     <a href="edit_password.php" class="change-pw-link">
-        🔒 Vuoi cambiare la password? Clicca qui
+        🔒 Cambia password
     </a>
 </div>
 
@@ -221,8 +246,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 document.getElementById('avatar-input').addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
+    // Anteprima immediata senza ricaricare la pagina
     const reader = new FileReader();
-    reader.onload = e => { document.getElementById('avatar-preview').src = e.target.result; };
+    reader.onload = e => {
+        document.getElementById('avatar-preview').src = e.target.result;
+    };
     reader.readAsDataURL(file);
 });
 </script>

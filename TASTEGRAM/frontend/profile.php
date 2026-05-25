@@ -138,7 +138,7 @@ $avatar = $profile['avatar_url'] ?: 'default_avatar.png';
     <div class="profile-header">
         <div class="profile-top">
             <div class="profile-avatar-wrap">
-                <img src="../img/<?= htmlspecialchars($avatar) ?>"
+                <img src="<?= htmlspecialchars(avatarSrc($avatar)) ?>"
                      onerror="this.src='../img/default_avatar.png'"
                      alt="@<?= htmlspecialchars($profile['username']) ?>">
             </div>

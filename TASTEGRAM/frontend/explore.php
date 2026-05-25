@@ -8,98 +8,18 @@ $tab      = $_GET['tab'] ?? 'posts'; // posts | users
 $results  = [];
 $hasQuery = $query !== '';
 
-// if ($hasQuery) {
-//     if ($tab === 'users') {
-//         // Cerca utenti per username o bio
-//         $stmt = $sql->prepare("
-//             SELECT id, username, avatar_url, bio, followers_count
-//             FROM users
-//             WHERE (username LIKE :q OR bio LIKE :q)
-//               AND username != 'ospite'
-//             ORDER BY followers_count DESC
-//             LIMIT 30
-//         ");
-//         $stmt->execute([':q' => '%' . $query . '%']);
-//         $results = $stmt->fetchAll();
-
-//         // Per ogni utente controlla se lo segui già
-//         foreach ($results as &$u) {
-//             $fs = $sql->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
-//             $fs->execute([$currentUserId, $u['id']]);
-//             $u['is_following'] = (bool) $fs->fetchColumn();
-//             $u['is_self']      = ($u['id'] === $currentUserId);
-//         }
-//         unset($u);
-
-//     } else {
-//         // Cerca post per titolo o tipo cucina
-//         $stmt = $sql->prepare("
-//             SELECT p.id, p.title_work, p.image_path, p.likes_count,
-//                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
-//                    u.username, u.avatar_url
-//             FROM posts p
-//             JOIN users u ON u.id = p.user_id
-//             WHERE p.title_work LIKE :q OR p.cuisine_type LIKE :q OR p.content LIKE :q
-//             ORDER BY p.likes_count DESC, p.created_at DESC
-//             LIMIT 30
-//         ");
-//         $stmt->execute([':q' => '%' . $query . '%']);
-//         $results = $stmt->fetchAll();
-//     }
-// } else {
-//     // Senza query: mostra post trending (più liked) e utenti suggeriti
-//     if ($tab === 'users') {
-//         $stmt = $sql->prepare("
-//             SELECT id, username, avatar_url, bio, followers_count
-//             FROM users
-//             WHERE username != 'ospite' AND id != :uid
-//             ORDER BY followers_count DESC
-//             LIMIT 20
-//         ");
-//         $stmt->execute([':uid' => $currentUserId]);
-//         $results = $stmt->fetchAll();
-
-//         foreach ($results as &$u) {
-//             $fs = $sql->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
-//             $fs->execute([$currentUserId, $u['id']]);
-//             $u['is_following'] = (bool) $fs->fetchColumn();
-//             $u['is_self']      = false;
-//         }
-//         unset($u);
-
-//     } else {
-//         $stmt = $sql->prepare("
-//             SELECT p.id, p.title_work, p.image_path, p.likes_count,
-//                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
-//                    u.username, u.avatar_url
-//             FROM posts p
-//             JOIN users u ON u.id = p.user_id
-//             ORDER BY p.likes_count DESC, p.created_at DESC
-//             LIMIT 30
-//         ");
-//         $stmt->execute();
-//         $results = $stmt->fetchAll();
-//     }
-// }
-
 if ($hasQuery) {
-    $searchTerm = '%' . $query . '%';
-
     if ($tab === 'users') {
         // Cerca utenti per username o bio
-        // Usiamo :q1 e :q2 perché PDO non permette lo stesso nome parametro più volte
         $stmt = $sql->prepare("
             SELECT id, username, avatar_url, bio, followers_count
             FROM users
-            WHERE (username LIKE :q1 OR bio LIKE :q2)
+            WHERE (username LIKE :q OR bio LIKE :q)
               AND username != 'ospite'
             ORDER BY followers_count DESC
             LIMIT 30
         ");
-        $stmt->execute([
-            ':q1' => $searchTerm,
-            ':q2' => $searchTerm
-        ]);
+        $stmt->execute([':q' => '%' . $query . '%']);
         $results = $stmt->fetchAll();
 
         // Per ogni utente controlla se lo segui già
@@ -112,23 +32,18 @@ if ($hasQuery) {
         unset($u);
 
     } else {
-        // Cerca post per titolo, tipo cucina o contenuto
-        // Usiamo :q1, :q2 e :q3 per evitare l'errore Invalid parameter number
+        // Cerca post per titolo o tipo cucina
         $stmt = $sql->prepare("
             SELECT p.id, p.title_work, p.image_path, p.likes_count,
                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
                    u.username, u.avatar_url
             FROM posts p
             JOIN users u ON u.id = p.user_id
-            WHERE p.title_work LIKE :q1 OR p.cuisine_type LIKE :q2 OR p.content LIKE :q3
+            WHERE p.title_work LIKE :q OR p.cuisine_type LIKE :q OR p.content LIKE :q
             ORDER BY p.likes_count DESC, p.created_at DESC
             LIMIT 30
         ");
-        $stmt->execute([
-            ':q1' => $searchTerm,
-            ':q2' => $searchTerm,
-            ':q3' => $searchTerm
-        ]);
+        $stmt->execute([':q' => '%' . $query . '%']);
         $results = $stmt->fetchAll();
     }
 } else {
@@ -153,7 +68,6 @@ if ($hasQuery) {
         unset($u);
 
     } else {
-        // Mostra i post con più like (Trending)
         $stmt = $sql->prepare("
             SELECT p.id, p.title_work, p.image_path, p.likes_count,
                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
@@ -416,7 +330,7 @@ function timeAgo(string $dt): string {
                 <?php foreach ($results as $u): ?>
                     <div class="user-item">
                         <a href="profile.php?user=<?= urlencode($u['username']) ?>" class="user-avatar">
-                            <img src="../img/<?= htmlspecialchars($u['avatar_url'] ?: 'default_avatar.png') ?>"
+                            <img src="<?= htmlspecialchars(avatarSrc($u['avatar_url'] ?? 'default_avatar.png')) ?>"
                                  onerror="this.src='../img/default_avatar.png'"
                                  alt="@<?= htmlspecialchars($u['username']) ?>">
                         </a>
