@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form method="POST" action="">
             <input type="hidden" name="username" value="ospite">
-            <input type="hidden" name="password" value="1234">
+            <input type="hidden" name="password" value="$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi">
             <button type="submit" class="btn-guest">Entra come Ospite</button>
         </form>
 

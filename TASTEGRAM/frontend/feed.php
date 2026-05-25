@@ -31,7 +31,7 @@ if ($filter === 'friends') {
 $posts = $stmt->fetchAll();
 
 // Controlla se l'utente loggato ha già messo like a un post
-function userLikedPost(sql $sql, int $postId, int $userId): bool {
+function userLikedPost(PDO $sql, int $postId, int $userId): bool {
     $s = $sql->prepare("SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?");
     $s->execute([$postId, $userId]);
     return (bool) $s->fetchColumn();

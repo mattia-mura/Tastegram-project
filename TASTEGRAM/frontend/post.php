@@ -63,19 +63,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isGuest) {
         $commentError = 'Il commento non può essere vuoto.';
     } elseif (mb_strlen($commentText) > 500) {
         $commentError = 'Commento troppo lungo (max 500 caratteri).';
+    // } else {
+    //     $ins = $sql->prepare("
+    //         INSERT INTO comments (post_id, user_id, parent_id, depth, content)
+    //         VALUES (:pid, :uid, :parent, :depth, :content)
+    //     ");
+    //     $ins->execute([
+    //         ':pid'     => $postId,
+    //         ':uid'     => $currentUserId,
+    //         ':parent'  => $parentId,
+    //         ':depth'   => $depth,
+    //         ':content' => $commentText,
+    //     ]);
     } else {
         $ins = $sql->prepare("
-            INSERT INTO comments (post_id, user_id, parent_id, depth, content)
-            VALUES (:pid, :uid, :parent, :depth, :content)
+            INSERT INTO comments (post_id, user_id, parent_id, content)
+            VALUES (:pid, :uid, :parent, :content)
         ");
         $ins->execute([
             ':pid'     => $postId,
             ':uid'     => $currentUserId,
             ':parent'  => $parentId,
-            ':depth'   => $depth,
             ':content' => $commentText,
         ]);
-
+        
         // Notifica all'autore del post (se non è il proprio)
         if ($post['user_id'] !== $currentUserId) {
             $sql->prepare("
