@@ -509,20 +509,61 @@ if (textarea) {
 }
 
 // ── ELIMINA POST ──
+// function deletePost(postId) {
+//     if (!confirm('Sei sicuro di voler eliminare questo post?')) return;
+//     fetch('../backend/api/delete_post.php', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ post_id: postId })
+//     })
+//     .then(r => r.json())
+//     .then(data => {
+//         if (data.success) {
+//             window.location.href = 'profile.php?user=<?= urlencode($currentUsername) ?>';
+//         } else {
+//             alert('Errore durante l\'eliminazione.');
+//         }
+//     });
+// }
+/**
+ * Funzione per eliminare il post via AJAX
+ */
 function deletePost(postId) {
-    if (!confirm('Sei sicuro di voler eliminare questo post?')) return;
+    // Messaggio di conferma
+    if (!confirm('Sei sicuro di voler eliminare definitivamente questo post? L\'operazione non è reversibile.')) {
+        return;
+    }
+
+    // Mostriamo un log in console per debug
+    console.log("Invio richiesta eliminazione per il post:", postId);
+
     fetch('../backend/api/delete_post.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ post_id: postId })
     })
-    .then(r => r.json())
+    .then(response => {
+        // Se il server risponde con un errore di file (es 404 o 500)
+        if (!response.ok) {
+            throw new Error('Errore di connessione al server (Status: ' + response.status + ')');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            window.location.href = 'profile.php?user=<?= urlencode($currentUsername) ?>';
+            alert('Post eliminato correttamente.');
+            // Reindirizziamo al feed o al profilo
+            window.location.href = 'feed.php';
         } else {
-            alert('Errore durante l\'eliminazione.');
+            // Mostriamo l'errore specifico restituito dal PHP
+            alert('Impossibile eliminare: ' + data.error);
         }
+    })
+    .catch(error => {
+        console.error('Errore:', error);
+        alert('Si è verificato un errore tecnico. Controlla la console del browser.');
     });
 }
 </script>
