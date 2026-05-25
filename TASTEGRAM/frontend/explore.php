@@ -4,13 +4,12 @@ require_once __DIR__ . '/../config/Database.php';
 $sql = Database::getInstance()->getConnection();
 
 $query    = trim($_GET['q'] ?? '');
-$tab      = $_GET['tab'] ?? 'posts'; // posts | users
+$tab      = $_GET['tab'] ?? 'posts'; // posts | users | news | shop
 $results  = [];
 $hasQuery = $query !== '';
 
 if ($hasQuery) {
     if ($tab === 'users') {
-        // Cerca utenti per username o bio
         $stmt = $sql->prepare("
             SELECT id, username, avatar_url, bio, followers_count
             FROM users
@@ -19,16 +18,10 @@ if ($hasQuery) {
             ORDER BY followers_count DESC
             LIMIT 30
         ");
-        
         $searchTerm = '%' . $query . '%';
-        // Passiamo due parametri perché abbiamo due segnaposto (:q1 e :q2)
-        $stmt->execute([
-            ':q1' => $searchTerm, 
-            ':q2' => $searchTerm
-        ]);
+        $stmt->execute([':q1' => $searchTerm, ':q2' => $searchTerm]);
         $results = $stmt->fetchAll();
 
-        // Per ogni utente controlla se lo segui già
         foreach ($results as &$u) {
             $fs = $sql->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
             $fs->execute([$currentUserId, $u['id']]);
@@ -37,33 +30,40 @@ if ($hasQuery) {
         }
         unset($u);
 
+    } elseif ($tab === 'shop') {
+        $stmt = $sql->prepare("
+            SELECT s.*, u.username, u.avatar_url
+            FROM shop_items s
+            JOIN users u ON u.id = s.user_id
+            WHERE s.title LIKE :q1 OR s.description LIKE :q2
+            ORDER BY s.created_at DESC
+            LIMIT 30
+        ");
+        $searchTerm = '%' . $query . '%';
+        $stmt->execute([':q1' => $searchTerm, ':q2' => $searchTerm]);
+        $results = $stmt->fetchAll();
+
     } else {
-        // Cerca post per titolo, tipo cucina o contenuto
+        // posts
         $stmt = $sql->prepare("
             SELECT p.id, p.title_work, p.image_path, p.likes_count,
                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
                    u.username, u.avatar_url
             FROM posts p
             JOIN users u ON u.id = p.user_id
-            WHERE p.title_work LIKE :q1 
-               OR p.cuisine_type LIKE :q2 
+            WHERE p.title_work LIKE :q1
+               OR p.cuisine_type LIKE :q2
                OR p.content LIKE :q3
             ORDER BY p.likes_count DESC, p.created_at DESC
             LIMIT 30
         ");
-
         $searchTerm = '%' . $query . '%';
-
-        $stmt->execute([
-            ':q1' => $searchTerm,
-            ':q2' => $searchTerm,
-            ':q3' => $searchTerm
-        ]);
-        
+        $stmt->execute([':q1' => $searchTerm, ':q2' => $searchTerm, ':q3' => $searchTerm]);
         $results = $stmt->fetchAll();
     }
+
 } else {
-    // Senza query: mostra post trending (più liked) e utenti suggeriti
+    // Senza query: trending / suggeriti / ultimi
     if ($tab === 'users') {
         $stmt = $sql->prepare("
             SELECT id, username, avatar_url, bio, followers_count
@@ -83,15 +83,19 @@ if ($hasQuery) {
         }
         unset($u);
 
-        foreach ($results as &$u) {
-            $fs = $sql->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
-            $fs->execute([$currentUserId, $u['id']]);
-            $u['is_following'] = (bool) $fs->fetchColumn();
-            $u['is_self']      = false;
-        }
-        unset($u);
+    } elseif ($tab === 'shop') {
+        $stmt = $sql->prepare("
+            SELECT s.*, u.username, u.avatar_url
+            FROM shop_items s
+            JOIN users u ON u.id = s.user_id
+            ORDER BY s.created_at DESC
+            LIMIT 30
+        ");
+        $stmt->execute();
+        $results = $stmt->fetchAll();
 
     } else {
+        // posts trending
         $stmt = $sql->prepare("
             SELECT p.id, p.title_work, p.image_path, p.likes_count,
                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
@@ -158,18 +162,17 @@ function timeAgo(string $dt): string {
         }
 
         /* Tab */
-        .tabs { display: flex; gap: 0; border-bottom: 1px solid #f0f0f0; }
+        .tabs { display: flex; gap: 0; border-bottom: 1px solid #f0f0f0; overflow-x: auto; }
         .tab-btn {
-            flex: 1; padding: 8px; text-align: center;
-            font-size: 13px; font-weight: 600; color: #aaa;
+            flex: 1; padding: 8px 4px; text-align: center;
+            font-size: 12px; font-weight: 600; color: #aaa;
             text-decoration: none; border-bottom: 2px solid transparent;
-            transition: all .2s;
+            transition: all .2s; white-space: nowrap; min-width: 0;
         }
         .tab-btn.active { color: var(--tc); border-bottom-color: var(--tc); }
 
         /* ── GRIGLIA POST ── */
         .content-wrap { max-width: 480px; margin: 0 auto; }
-
         .post-grid {
             display: grid; grid-template-columns: repeat(3, 1fr);
             gap: 2px; padding: 2px;
@@ -189,8 +192,6 @@ function timeAgo(string $dt): string {
             transition: background .2s;
         }
         .grid-item:hover .grid-overlay { background: rgba(0,0,0,0.40); }
-
-        /* Etichetta cucina sulla miniatura */
         .grid-badge {
             position: absolute; bottom: 5px; left: 5px;
             background: rgba(0,0,0,0.55); color: #fff;
@@ -229,9 +230,9 @@ function timeAgo(string $dt): string {
             border: 1.5px solid; font-family: 'DM Sans', sans-serif;
             transition: all .2s; flex-shrink: 0;
         }
-        .btn-follow-sm.follow { background: var(--tc); border-color: var(--tc); color: #fff; }
+        .btn-follow-sm.follow    { background: var(--tc); border-color: var(--tc); color: #fff; }
         .btn-follow-sm.following { background: #f0f0f0; border-color: #ddd; color: #555; }
-        .btn-follow-sm.self { display: none; }
+        .btn-follow-sm.self      { display: none; }
 
         /* ── NEWS ── */
         .news-list { padding: 4px 0; }
@@ -275,6 +276,56 @@ function timeAgo(string $dt): string {
         }
         .lang-btn.active { background: var(--tc); border-color: var(--tc); color: #fff; }
 
+        /* ── SHOP ── */
+        .shop-header-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px 6px;
+        }
+        .shop-header-bar .section-label { padding: 0; }
+        .btn-sell {
+            padding: 7px 16px; background: var(--tc); color: #fff; border: none;
+            border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer;
+            font-family: 'DM Sans', sans-serif; text-decoration: none;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .btn-sell:hover { opacity: .88; }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px; padding: 10px 16px;
+        }
+        .shop-card {
+            background: #fff; border-radius: 14px;
+            overflow: hidden; cursor: pointer;
+            border: 1px solid #f0f0f0;
+            text-decoration: none; color: inherit;
+            transition: transform .15s, box-shadow .15s;
+            display: flex; flex-direction: column;
+        }
+        .shop-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+        .shop-card-img {
+            width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block;
+            background: var(--cr);
+        }
+        .shop-card-placeholder {
+            width: 100%; aspect-ratio: 1/1; background: linear-gradient(135deg,#f5e6d3,#fce8d0);
+            display: flex; align-items: center; justify-content: center; font-size: 44px;
+        }
+        .shop-card-body { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .shop-card-price { font-size: 16px; font-weight: 700; color: var(--tc); }
+        .shop-card-title {
+            font-size: 13px; font-weight: 600; color: var(--br);
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .shop-card-seller {
+            font-size: 11px; color: #999; margin-top: auto; padding-top: 4px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .shop-card-seller img {
+            width: 16px; height: 16px; border-radius: 50%; object-fit: cover;
+        }
+
         /* ── SEZIONE LABEL ── */
         .section-label {
             padding: 12px 16px 6px;
@@ -283,11 +334,14 @@ function timeAgo(string $dt): string {
         }
 
         /* ── EMPTY STATE ── */
-        .empty-state {
-            text-align: center; padding: 60px 24px; color: #bbb;
-        }
+        .empty-state { text-align: center; padding: 60px 24px; color: #bbb; }
         .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
         .empty-state p { font-size: 14px; line-height: 1.6; }
+        .empty-state a {
+            display: inline-block; margin-top: 16px; padding: 10px 24px;
+            background: var(--tc); color: #fff; border-radius: 12px;
+            text-decoration: none; font-weight: 600; font-size: 14px;
+        }
 
         /* ── BOTTOM NAV ── */
         .bottom-nav {
@@ -302,9 +356,9 @@ function timeAgo(string $dt): string {
             border: none; background: none; cursor: pointer;
             font-family: 'DM Sans', sans-serif;
         }
-        .bn-item .bn-icon { font-size: 22px; }
+        .bn-item .bn-icon  { font-size: 22px; }
         .bn-item .bn-label { font-size: 10px; }
-        .bn-item.active { color: var(--tc); }
+        .bn-item.active    { color: var(--tc); }
         .bn-item.active .bn-label { font-weight: 700; }
     </style>
 </head>
@@ -318,7 +372,7 @@ function timeAgo(string $dt): string {
             <div class="search-input-wrap">
                 <span class="search-icon">🔍</span>
                 <input type="text" name="q" id="search-input" class="search-input"
-                       placeholder="Cerca piatti, ricette, utenti..."
+                       placeholder="Cerca piatti, utenti, articoli..."
                        value="<?= htmlspecialchars($query) ?>"
                        autocomplete="off">
                 <button type="button" class="search-clear" id="clear-btn" onclick="clearSearch()">✕</button>
@@ -327,7 +381,7 @@ function timeAgo(string $dt): string {
         </form>
     </div>
 
-    <!-- Tab Posts / Utenti / Novità -->
+    <!-- Tab -->
     <div class="tabs">
         <a href="explore.php?tab=posts<?= $hasQuery ? '&q='.urlencode($query) : '' ?>"
            class="tab-btn <?= $tab === 'posts' ? 'active' : '' ?>">🍽️ Piatti</a>
@@ -335,6 +389,8 @@ function timeAgo(string $dt): string {
            class="tab-btn <?= $tab === 'users' ? 'active' : '' ?>">👤 Utenti</a>
         <a href="explore.php?tab=news"
            class="tab-btn <?= $tab === 'news' ? 'active' : '' ?>">📰 Novità</a>
+        <a href="explore.php?tab=shop<?= $hasQuery ? '&q='.urlencode($query) : '' ?>"
+           class="tab-btn <?= $tab === 'shop' ? 'active' : '' ?>">🛒 Shop</a>
     </div>
 </nav>
 
@@ -433,6 +489,61 @@ function timeAgo(string $dt): string {
                 Carica altre
             </button>
         </div>
+
+    <?php elseif ($tab === 'shop'): ?>
+        <!-- Header Shop con pulsante "Metti in vendita" -->
+        <div class="shop-header-bar">
+            <div class="section-label" style="padding:0">
+                <?= $hasQuery
+                    ? '🔍 Risultati per "' . htmlspecialchars($query) . '"'
+                    : '🛒 Articoli in vendita' ?>
+            </div>
+            <?php if (!$isGuest): ?>
+                <a href="new_shop_item.php" class="btn-sell">＋ Vendi</a>
+            <?php else: ?>
+                <a href="../backend/login/registration.php" class="btn-sell" style="background:#ccc">＋ Vendi</a>
+            <?php endif; ?>
+        </div>
+
+        <?php if (empty($results)): ?>
+            <div class="empty-state">
+                <div class="emoji">🛒</div>
+                <?php if ($hasQuery): ?>
+                    <p>Nessun articolo trovato per<br><strong>"<?= htmlspecialchars($query) ?>"</strong></p>
+                <?php else: ?>
+                    <p>Ancora nessun articolo in vendita.<br>Sii il primo a pubblicare!</p>
+                    <?php if (!$isGuest): ?>
+                        <a href="new_shop_item.php">＋ Metti in vendita</a>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="shop-grid">
+                <?php foreach ($results as $item): ?>
+                    <a href="shop_item.php?id=<?= $item['id'] ?>" class="shop-card">
+                        <?php if (!empty($item['image_path'])): ?>
+                            <img class="shop-card-img"
+                                 src="../img/uploads/shops/<?= htmlspecialchars($item['image_path']) ?>"
+                                 onerror="this.style.display='none'"
+                                 alt="<?= htmlspecialchars($item['title']) ?>">
+                        <?php else: ?>
+                            <div class="shop-card-placeholder">🛒</div>
+                        <?php endif; ?>
+                        <div class="shop-card-body">
+                            <div class="shop-card-price">€<?= number_format((float)$item['price'], 2, ',', '.') ?></div>
+                            <div class="shop-card-title"><?= htmlspecialchars($item['title']) ?></div>
+                            <div class="shop-card-seller">
+                                <img src="<?= htmlspecialchars(avatarSrc($item['avatar_url'])) ?>"
+                                     onerror="this.src='../img/default_avatar.png'"
+                                     alt="">
+                                @<?= htmlspecialchars($item['username']) ?>
+                            </div>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
     <?php endif; ?>
 
 </div>
@@ -507,8 +618,8 @@ function toggleFollow(userId) {
     .then(data => {
         if (data.success) {
             const btn = document.getElementById('follow-' + userId);
-            btn.textContent     = data.following ? '✓ Seguito' : '+ Segui';
-            btn.className       = 'btn-follow-sm ' + (data.following ? 'following' : 'follow');
+            btn.textContent = data.following ? '✓ Seguito' : '+ Segui';
+            btn.className   = 'btn-follow-sm ' + (data.following ? 'following' : 'follow');
         }
     });
 }
@@ -558,7 +669,6 @@ function loadNews(append = false) {
     const c = document.getElementById('news-container');
     if (!append) c.innerHTML = '<div class="news-loading"><div class="spinner"></div><div>Caricamento...</div></div>';
 
-    // fetch(`/tastegram/backend/api/gnews.php?action=food_news&lang=${newsLang}&page=${newsPage}`)
     fetch(`../backend/api/gnews.php?action=food_news&lang=${newsLang}&page=${newsPage}`)
         .then(r => r.json())
         .then(data => {
@@ -589,5 +699,6 @@ function setLang(lang) {
 loadNews();
 </script>
 <?php endif; ?>
+
 </body>
 </html>

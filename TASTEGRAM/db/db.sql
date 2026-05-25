@@ -37,7 +37,26 @@ CREATE TABLE posts (
     FULLTEXT INDEX ft_title_work (title_work)
 ) ENGINE=InnoDB;
 
--- 4. TABELLA FOLLOW
+-- 4. TABELLA SHOP
+CREATE TABLE IF NOT EXISTS `shop_items` (
+    `id`          INT              NOT NULL AUTO_INCREMENT,
+    `user_id`     INT              NOT NULL,
+    `title`       VARCHAR(255)     NOT NULL,
+    `description` TEXT             NOT NULL,
+    `price`       DECIMAL(10, 2)   NOT NULL,
+    `image_path`  VARCHAR(255)     DEFAULT NULL,
+    `created_at`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_shop_user`    (`user_id`),
+    KEY `idx_shop_created` (`created_at`),
+    CONSTRAINT `fk_shop_user`
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- 5. TABELLA FOLLOW
 CREATE TABLE follows (
     follower_id INT NOT NULL,
     followed_id INT NOT NULL,
@@ -48,7 +67,7 @@ CREATE TABLE follows (
     CONSTRAINT fk_followed FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 5. TABELLA LIKE
+-- 6. TABELLA LIKE
 CREATE TABLE likes (
     post_id    INT NOT NULL,
     user_id    INT NOT NULL,
@@ -59,7 +78,7 @@ CREATE TABLE likes (
     CONSTRAINT fk_like_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 6. TABELLA COMMENTI
+-- 7. TABELLA COMMENTI
 CREATE TABLE comments (
     id         INT AUTO_INCREMENT PRIMARY KEY,
     post_id    INT     NOT NULL,
@@ -73,7 +92,7 @@ CREATE TABLE comments (
     CONSTRAINT fk_comment_parent FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 7. TABELLA NOTIFICHE
+-- 8. TABELLA NOTIFICHE
 CREATE TABLE notifications (
     id         INT AUTO_INCREMENT PRIMARY KEY,
     user_id    INT     NOT NULL,
@@ -87,7 +106,7 @@ CREATE TABLE notifications (
     CONSTRAINT fk_notif_actor FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 8. INSERIMENTO UTENTI di DEFAULT (ADMIN-OSPITE)
+-- 9. INSERIMENTO UTENTI di DEFAULT (ADMIN-OSPITE)
 
 INSERT INTO users (username, email, password, bio, role) 
 VALUES ('admin', 'admin@tastegram.it', '$5f$67$abc' , 'Account admin di tastegram', 1);
@@ -96,7 +115,7 @@ INSERT INTO users (username, email, password, bio, role)
 VALUES ('ospite', 'ospite@tastegram.it', '$2y$10$xyz' , 'Account per visitatori', 3);
 
 
--- 9. TRIGGER-aggiornano a commento e like il valore dei like e commenti
+-- 10. TRIGGER-aggiornano a commento e like il valore dei like e commenti
 DELIMITER $$
 
 CREATE TRIGGER trg_like_insert AFTER INSERT ON likes FOR EACH ROW
