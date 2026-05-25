@@ -203,7 +203,7 @@ $avatar = $profile['avatar_url'] ?: 'default_avatar.png';
         <?php else: foreach ($userPosts as $p): ?>
             <div class="grid-item" onclick="window.location='post.php?id=<?= $p['id'] ?>'">
                 <?php if (!empty($p['image_path'])): ?>
-                    <img src="../img/uploads/foto/<?= htmlspecialchars($p['image_path']) ?>"
+                    <img src="<?= htmlspecialchars(postImageSrc($p['image_path'])) ?>"
                          onerror="this.style.display='none'"
                          alt="<?= htmlspecialchars($p['title_work']) ?>">
                 <?php else: ?>
@@ -236,7 +236,14 @@ $avatar = $profile['avatar_url'] ?: 'default_avatar.png';
 
 <script>
 function toggleFollow(targetId) {
-    fetch('../backend/api/follow.php', {
+    const btn = document.getElementById('follow-btn');
+
+    // Blocca click multipli durante la chiamata
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+
+    fetch('/tastegram/backend/api/follow.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target_id: targetId })
@@ -244,7 +251,6 @@ function toggleFollow(targetId) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            const btn = document.getElementById('follow-btn');
             btn.textContent = data.following ? '✓ Seguito' : '+ Segui';
             btn.classList.toggle('following', data.following);
             document.getElementById('followers-count').textContent = data.followers_count;
@@ -252,7 +258,12 @@ function toggleFollow(targetId) {
             alert('Errore: ' + (data.error ?? 'sconosciuto'));
         }
     })
-    .catch(() => alert('Errore di rete, riprova.'));
+    .catch(() => alert('Errore di rete, riprova.'))
+    .finally(() => {
+        // Riabilita il bottone solo dopo la risposta
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    });
 }
 </script>
 </body>

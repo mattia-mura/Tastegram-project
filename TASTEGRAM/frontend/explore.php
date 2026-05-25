@@ -14,12 +14,18 @@ if ($hasQuery) {
         $stmt = $sql->prepare("
             SELECT id, username, avatar_url, bio, followers_count
             FROM users
-            WHERE (username LIKE :q OR bio LIKE :q)
+            WHERE (username LIKE :q1 OR bio LIKE :q2)
               AND username != 'ospite'
             ORDER BY followers_count DESC
             LIMIT 30
         ");
-        $stmt->execute([':q' => '%' . $query . '%']);
+        
+        $searchTerm = '%' . $query . '%';
+        // Passiamo due parametri perché abbiamo due segnaposto (:q1 e :q2)
+        $stmt->execute([
+            ':q1' => $searchTerm, 
+            ':q2' => $searchTerm
+        ]);
         $results = $stmt->fetchAll();
 
         // Per ogni utente controlla se lo segui già
@@ -32,18 +38,28 @@ if ($hasQuery) {
         unset($u);
 
     } else {
-        // Cerca post per titolo o tipo cucina
+        // Cerca post per titolo, tipo cucina o contenuto
         $stmt = $sql->prepare("
             SELECT p.id, p.title_work, p.image_path, p.likes_count,
                    p.comments_count, p.rating, p.cuisine_type, p.created_at,
                    u.username, u.avatar_url
             FROM posts p
             JOIN users u ON u.id = p.user_id
-            WHERE p.title_work LIKE :q OR p.cuisine_type LIKE :q OR p.content LIKE :q
+            WHERE p.title_work LIKE :q1 
+               OR p.cuisine_type LIKE :q2 
+               OR p.content LIKE :q3
             ORDER BY p.likes_count DESC, p.created_at DESC
             LIMIT 30
         ");
-        $stmt->execute([':q' => '%' . $query . '%']);
+
+        $searchTerm = '%' . $query . '%';
+
+        $stmt->execute([
+            ':q1' => $searchTerm,
+            ':q2' => $searchTerm,
+            ':q3' => $searchTerm
+        ]);
+        
         $results = $stmt->fetchAll();
     }
 } else {
