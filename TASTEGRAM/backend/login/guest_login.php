@@ -1,6 +1,5 @@
 <?php
-// backend/login/guest_login.php
-// Login diretto per l'account ospite — nessuna password da verificare
+// Login diretto per l'account ospite — nessuna password da verificare ['ospite', 'ospite@tastegram.it', '$2y$10$xyz', 'Account per visitatori']
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once __DIR__ . '/../config/Database.php';

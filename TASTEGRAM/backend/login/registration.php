@@ -96,26 +96,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email']    ?? '');
     $password = $_POST['password']      ?? '';
  
-    // Validazioni
-    if (empty($username) || empty($email) || empty($password)) {
+    // if x password->restrizioni
+    if (empty($username) || empty($email) || empty($password)) { //vuoto
         $error = 'Tutti i campi sono obbligatori.';
-    } elseif (strlen($username) < 3 || strlen($username) > 50) {
-        $error = 'Username deve essere tra 3 e 50 caratteri.';
-    } elseif (!preg_match('/^[a-zA-Z0-9_.]+$/', $username)) {
+    } elseif (strlen($username) < 4 && strlen($username) > 20) { //4-20 caratteri usr
+        $error = 'Username deve avere almeno 4 caratteri e massimo 20.';
+    } elseif (!preg_match('/^[a-zA-Z0-9_.]+$/', $username)) { //caretteri concesi
         $error = 'Username: solo lettere, numeri, punti e underscore.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) { //@ e .
         $error = 'Inserisci un indirizzo email valido.';
-    } elseif (strlen($password) < 6) {
-        $error = 'La password deve avere almeno 6 caratteri.';
+    } elseif (strlen($password) < 6 && strlen($password) > 20) { //6-20 psswd
+        $error = 'La password deve avere almeno 6 caratteri e massimo 20.';
     } else {
-        // Controlla unicità username e email
+        //controlla username e email nel db
         $check = $sql->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
         $check->execute([$username, $email]);
  
         if ($check->fetch()) {
             $error = 'Username o email già in uso.';
         } else {
-            // Hash sicuro con PASSWORD_DEFAULT
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
  
             $stmt = $sql->prepare("
@@ -127,7 +126,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id']    = (int) $sql->lastInsertId();
                 $_SESSION['username']   = $username;
                 $_SESSION['avatar_url'] = 'default_avatar.png';
- 
                 header('Location: ../../frontend/feed.php');
                 exit;
             } else {
