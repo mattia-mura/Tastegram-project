@@ -24,14 +24,14 @@ $stmt = $sql->prepare("
 $stmt->execute([':uid' => $currentUserId]);
 $notifications = $stmt->fetchAll();
 
-// function timeAgo(string $dt): string {
-//     $diff = time() - strtotime($dt);
-//     if ($diff < 60)     return 'ora';
-//     if ($diff < 3600)   return floor($diff/60) . 'm fa';
-//     if ($diff < 86400)  return floor($diff/3600) . 'h fa';
-//     if ($diff < 604800) return floor($diff/86400) . 'g fa';
-//     return date('d/m/Y', strtotime($dt));
-// }
+function timeAgo(string $dt): string {
+    $diff = time() - strtotime($dt);
+    if ($diff < 60)     return 'ora';
+    if ($diff < 3600)   return floor($diff/60) . 'm fa';
+    if ($diff < 86400)  return floor($diff/3600) . 'h fa';
+    if ($diff < 604800) return floor($diff/86400) . 'g fa';
+    return date('d/m/Y', strtotime($dt));
+}
 
 $typeLabel = [
     'like'    => 'ha messo like al tuo post',

@@ -102,10 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && (password_verify($password, $user['password']) || $password === $user['password'])) {
-            $_SESSION['user_id']    = (int) $user['id'];
-            $_SESSION['username']   = $user['username'];
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
             $_SESSION['avatar_url'] = $user['avatar_url'];
-            $_SESSION['is_admin']   = (bool) ($user['is_admin'] ?? false);
             
             header('Location: ../../frontend/feed.php');
             exit;
@@ -152,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <form method="POST" action="">
             <input type="hidden" name="username" value="ospite">
-            <input type="hidden" name="password" value="$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi">
+            <input type="hidden" name="password" value="$2y$10$xyz">
             <button type="submit" class="btn-guest">Entra come Ospite</button>
         </form>
 

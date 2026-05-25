@@ -77,9 +77,9 @@ $avatar = $profile['avatar_url'] ?: 'default_avatar.png';
         .profile-bio { font-size: 13px; color: #555; line-height: 1.5; }
         .profile-bio-empty { font-size: 13px; color: #bbb; font-style: italic; }
 
-        .profile-actions { display: flex; gap: 8px; }
+        .profile-actions { display: flex; }
         .btn-action {
-            flex: 1; padding: 8px 12px; border-radius: 10px;
+            width: 100%; padding: 10px 12px; border-radius: 10px;
             font-size: 14px; font-weight: 600; cursor: pointer;
             border: 1.5px solid; font-family: 'DM Sans', sans-serif;
             transition: all .2s; text-align: center; text-decoration: none;
@@ -88,7 +88,6 @@ $avatar = $profile['avatar_url'] ?: 'default_avatar.png';
         .btn-follow-action { background: var(--tc); border-color: var(--tc); color: #fff; }
         .btn-follow-action.following { background: #f0f0f0; border-color: #ddd; color: #555; }
         .btn-follow-action:hover { opacity: .88; }
-        .btn-message { background: transparent; border-color: var(--tc); color: var(--tc); }
 
         .post-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
         .grid-item {
@@ -177,8 +176,6 @@ $avatar = $profile['avatar_url'] ?: 'default_avatar.png';
                         onclick="toggleFollow(<?= $profile['id'] ?>)">
                     <?= $isFollowing ? '✓ Seguito' : '+ Segui' ?>
                 </button>
-                <a href="messages.php?user=<?= urlencode($profile['username']) ?>"
-                   class="btn-action btn-message">💬 Messaggio</a>
             <?php else: ?>
                 <a href="../backend/login/registration.php"
                    class="btn-action btn-follow-action">+ Segui</a>

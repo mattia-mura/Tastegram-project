@@ -105,14 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isGuest) {
 
 $avatar = $post['avatar_url'] ?? 'default_avatar.png';
 
-// function timeAgo(string $dt): string {
-//     $diff = time() - strtotime($dt);
-//     if ($diff < 60)     return 'ora';
-//     if ($diff < 3600)   return floor($diff/60) . 'm fa';
-//     if ($diff < 86400)  return floor($diff/3600) . 'h fa';
-//     if ($diff < 604800) return floor($diff/86400) . 'g fa';
-//     return date('d/m/Y', strtotime($dt));
-// }
+function timeAgo(string $dt): string {
+    $diff = time() - strtotime($dt);
+    if ($diff < 60)     return 'ora';
+    if ($diff < 3600)   return floor($diff/60) . 'm fa';
+    if ($diff < 86400)  return floor($diff/3600) . 'h fa';
+    if ($diff < 604800) return floor($diff/86400) . 'g fa';
+    return date('d/m/Y', strtotime($dt));
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -286,13 +286,30 @@ $avatar = $post['avatar_url'] ?? 'default_avatar.png';
             display: none; /* nascosta su questa pagina, c'è la comment bar */
         }
 
-        /* delete post (solo autore) */
+        /* delete post (solo autore o admin) */
         .delete-btn {
             background: none; border: none; cursor: pointer;
             color: #d85140; font-size: 13px; font-family: 'DM Sans', sans-serif;
             padding: 0; margin-left: auto;
         }
         .delete-btn:hover { text-decoration: underline; }
+
+        /* elimina commento (autore commento o admin) */
+        .delete-comment-btn {
+            font-size: 11px; font-weight: 700; color: #d85140;
+            background: none; border: none; cursor: pointer;
+            font-family: 'DM Sans', sans-serif; padding: 0;
+            opacity: 0.7; transition: opacity .15s;
+        }
+        .delete-comment-btn:hover { opacity: 1; text-decoration: underline; }
+
+        /* Badge admin visibile accanto allo username */
+        .admin-badge {
+            display: inline-block; font-size: 10px; font-weight: 700;
+            background: #C1440E; color: #fff; border-radius: 4px;
+            padding: 1px 5px; margin-left: 4px; vertical-align: middle;
+            letter-spacing: .3px;
+        }
     </style>
 </head>
 <body>
@@ -300,7 +317,10 @@ $avatar = $post['avatar_url'] ?? 'default_avatar.png';
 <!-- NAVBAR -->
 <nav class="navbar">
     <a href="javascript:history.back()" class="nav-back">←</a>
-    <span class="nav-title"><?= htmlspecialchars($post['title_work']) ?></span>
+    <span class="nav-title">
+        <?= htmlspecialchars($post['title_work']) ?>
+        <?php if ($isAdmin): ?><span class="admin-badge">ADMIN</span><?php endif; ?>
+    </span>
     <?php if ($post['user_id'] === $currentUserId || $isAdmin): ?>
         <button class="delete-btn" onclick="deletePost(<?= $postId ?>)">🗑 Elimina</button>
     <?php endif; ?>
@@ -400,9 +420,9 @@ $avatar = $post['avatar_url'] ?? 'default_avatar.png';
                                     Rispondi
                                 </button>
                             <?php endif; ?>
-                            <?php if ($isAdmin): ?>
-                                <button class="reply-btn" style="color:#d85140"
-                                        onclick="adminDeleteComment(<?= $c['id'] ?>, this)">
+                            <?php if ($c['user_id'] === $currentUserId || $isAdmin): ?>
+                                <button class="delete-comment-btn"
+                                        onclick="deleteComment(<?= $c['id'] ?>)">
                                     🗑 Elimina
                                 </button>
                             <?php endif; ?>
@@ -426,9 +446,9 @@ $avatar = $post['avatar_url'] ?? 'default_avatar.png';
                             <div class="comment-text"><?= nl2br(htmlspecialchars($r['content'])) ?></div>
                             <div class="comment-meta">
                                 <span class="comment-time"><?= timeAgo($r['created_at']) ?></span>
-                                <?php if ($isAdmin): ?>
-                                    <button class="reply-btn" style="color:#d85140"
-                                            onclick="adminDeleteComment(<?= $r['id'] ?>, this)">
+                                <?php if ($r['user_id'] === $currentUserId || $isAdmin): ?>
+                                    <button class="delete-comment-btn"
+                                            onclick="deleteComment(<?= $r['id'] ?>)">
                                         🗑 Elimina
                                     </button>
                                 <?php endif; ?>
@@ -520,60 +540,83 @@ if (textarea) {
     });
 }
 
-// ── ELIMINA POST (admin o proprietario) ──
-function deletePost(postId) {
-    if (!confirm('Sei sicuro di voler eliminare questo post?')) return;
-    const endpoint = <?= $isAdmin ? 'true' : 'false' ?> && <?= ($post['user_id'] !== $currentUserId) ? 'true' : 'false' ?>
-        ? '/tastegram/backend/api/admin.php'
-        : '/tastegram/backend/api/delete_post.php';
-    const body = endpoint.includes('admin')
-        ? { action: 'delete_post', post_id: postId }
-        : { post_id: postId };
+// ── ELIMINA COMMENTO (autore o admin) ──
+function deleteComment(commentId) {
+    if (!confirm('Eliminare questo commento? L\'operazione non è reversibile.')) return;
 
-    fetch(endpoint, {
+    fetch('../backend/api/delete_comment.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) window.location.href = 'feed.php';
-        else alert('Errore: ' + (data.error ?? 'sconosciuto'));
-    });
-}
-
-<?php if ($isAdmin): ?>
-// ── ADMIN: elimina commento ──
-function adminDeleteComment(commentId, btn) {
-    if (!confirm('Eliminare questo commento?')) return;
-    fetch('/tastegram/backend/api/admin.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_comment', comment_id: commentId })
+        body: JSON.stringify({ comment_id: commentId })
     })
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            // Rimuove il div commento dal DOM
-            const card = btn.closest('.comment');
-            if (card) card.remove();
+            // Rimuove il commento (e le sue risposte indentate) dal DOM
+            const el = document.getElementById('comment-' + commentId);
+            if (el) el.remove();
         } else {
             alert('Errore: ' + (data.error ?? 'sconosciuto'));
         }
-    });
+    })
+    .catch(() => alert('Errore di rete, riprova.'));
 }
-<?php endif; ?>
+
+
+//     if (!confirm('Sei sicuro di voler eliminare questo post?')) return;
+//     fetch('../backend/api/delete_post.php', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ post_id: postId })
+//     })
+//     .then(r => r.json())
+//     .then(data => {
+//         if (data.success) {
+//             window.location.href = 'profile.php?user=<?= urlencode($currentUsername) ?>';
+//         } else {
+//             alert('Errore durante l\'eliminazione.');
+//         }
+//     });
+// }
+/**
+ * Funzione per eliminare il post via AJAX
+ */
+function deletePost(postId) {
+    // Messaggio di conferma
+    if (!confirm('Sei sicuro di voler eliminare definitivamente questo post? L\'operazione non è reversibile.')) {
+        return;
+    }
+
+    // Mostriamo un log in console per debug
+    console.log("Invio richiesta eliminazione per il post:", postId);
+
+    fetch('../backend/api/delete_post.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ post_id: postId })
     })
-    .then(r => r.json())
+    .then(response => {
+        // Se il server risponde con un errore di file (es 404 o 500)
+        if (!response.ok) {
+            throw new Error('Errore di connessione al server (Status: ' + response.status + ')');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            window.location.href = 'profile.php?user=<?= urlencode($currentUsername) ?>';
+            alert('Post eliminato correttamente.');
+            // Reindirizziamo al feed o al profilo
+            window.location.href = 'feed.php';
         } else {
-            alert('Errore durante l\'eliminazione.');
+            // Mostriamo l'errore specifico restituito dal PHP
+            alert('Impossibile eliminare: ' + data.error);
         }
+    })
+    .catch(error => {
+        console.error('Errore:', error);
+        alert('Si è verificato un errore tecnico. Controlla la console del browser.');
     });
 }
 </script>
