@@ -113,4 +113,10 @@ BEGIN
     UPDATE users SET following_count = following_count + 1 WHERE id = NEW.follower_id;
 END$$
 
+CREATE TRIGGER trg_follow_delete AFTER DELETE ON follows FOR EACH ROW
+BEGIN
+    UPDATE users SET followers_count = GREATEST(followers_count - 1, 0) WHERE id = OLD.followed_id;
+    UPDATE users SET following_count = GREATEST(following_count - 1, 0) WHERE id = OLD.follower_id;
+END$$
+
 DELIMITER ;

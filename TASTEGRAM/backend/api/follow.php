@@ -79,17 +79,17 @@ try {
         ")->execute([$myId, $targetId]);
 
         // Decrementa contatori — GREATEST evita valori negativi
-        $sql->prepare("
-            UPDATE users
-            SET followers_count = GREATEST(followers_count - 1, 0)
-            WHERE id = ?
-        ")->execute([$targetId]);
+        // $sql->prepare("
+        //     UPDATE users
+        //     SET followers_count = GREATEST(followers_count - 1, 0)
+        //     WHERE id = ?
+        // ")->execute([$targetId]);
 
-        $sql->prepare("
-            UPDATE users
-            SET following_count = GREATEST(following_count - 1, 0)
-            WHERE id = ?
-        ")->execute([$myId]);
+        // $sql->prepare("
+        //     UPDATE users
+        //     SET following_count = GREATEST(following_count - 1, 0)
+        //     WHERE id = ?
+        // ")->execute([$myId]);
 
         $following = false;
 
@@ -110,17 +110,17 @@ try {
         // Nota: i trigger del tuo db.sql esistono — se li hai attivi
         // rimuovi i due UPDATE qui sotto per evitare doppio conteggio.
         // Se hai rimosso i trigger, tienili.
-        $sql->prepare("
-            UPDATE users
-            SET followers_count = followers_count + 1
-            WHERE id = ?
-        ")->execute([$targetId]);
+        // $sql->prepare("
+        //     UPDATE users
+        //     SET followers_count = followers_count + 1
+        //     WHERE id = ?
+        // ")->execute([$targetId]);
 
-        $sql->prepare("
-            UPDATE users
-            SET following_count = following_count + 1
-            WHERE id = ?
-        ")->execute([$myId]);
+        // $sql->prepare("
+        //     UPDATE users
+        //     SET following_count = following_count + 1
+        //     WHERE id = ?
+        // ")->execute([$myId]);
 
         // Notifica — solo se l'utente non era già seguito
         $sql->prepare("
@@ -150,3 +150,5 @@ echo json_encode([
     'following'       => $following,
     'followers_count' => (int) $fc->fetchColumn(),
 ]);
+
+
