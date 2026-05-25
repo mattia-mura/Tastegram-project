@@ -149,11 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="divider"><span>Oppure</span></div>
 
-        <form method="POST" action="">
-            <input type="hidden" name="username" value="ospite">
-            <input type="hidden" name="password" value="$2y$10$xyz">
-            <button type="submit" class="btn-guest">Entra come Ospite</button>
-        </form>
+        <a href="guest_login.php" class="btn-guest" style="display:block;text-align:center;text-decoration:none;">Entra come Ospite</a>
 
         <p class="footer-text">
             Nuovo qui? <a href="registration.php">Registrati gratuitamente</a>

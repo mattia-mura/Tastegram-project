@@ -107,7 +107,9 @@ $me = $stmt->fetch();
         </div>
     </div>
 
-    <!-- ACCOUNT: solo modifica dati profilo, NO logout qui -->
+    <?php if (!$isGuest): ?>
+
+    <!-- ACCOUNT: solo per utenti registrati -->
     <div class="settings-group">
         <div class="group-label">Account</div>
         <a href="edit_profile.php" class="settings-item">
@@ -148,6 +150,30 @@ $me = $stmt->fetch();
             <span class="item-arrow">›</span>
         </a>
     </div>
+
+    <?php else: ?>
+
+    <!-- OSPITE: messaggio informativo -->
+    <div class="settings-group">
+        <div class="group-label">Account ospite</div>
+        <div class="settings-item" style="cursor:default;">
+            <div class="item-icon" style="background:#f5f5f5">🔒</div>
+            <div class="item-text">
+                <div class="item-label" style="color:#aaa;">Funzioni non disponibili</div>
+                <div class="item-desc">Registrati per modificare il profilo e accedere a tutte le funzioni</div>
+            </div>
+        </div>
+        <a href="../backend/login/registration.php" class="settings-item">
+            <div class="item-icon" style="background:#fdf0e0">✏️</div>
+            <div class="item-text">
+                <div class="item-label">Crea un account</div>
+                <div class="item-desc">Registrati gratuitamente</div>
+            </div>
+            <span class="item-arrow">›</span>
+        </a>
+    </div>
+
+    <?php endif; ?>
 
     <!-- LOGOUT separato — ben distanziato dalla sezione account -->
     <div class="logout-group">
