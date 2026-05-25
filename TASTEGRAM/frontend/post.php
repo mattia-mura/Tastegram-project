@@ -105,14 +105,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isGuest) {
 
 $avatar = $post['avatar_url'] ?? 'default_avatar.png';
 
-function timeAgo(string $dt): string {
-    $diff = time() - strtotime($dt);
-    if ($diff < 60)     return 'ora';
-    if ($diff < 3600)   return floor($diff/60) . 'm fa';
-    if ($diff < 86400)  return floor($diff/3600) . 'h fa';
-    if ($diff < 604800) return floor($diff/86400) . 'g fa';
-    return date('d/m/Y', strtotime($dt));
-}
+// function timeAgo(string $dt): string {
+//     $diff = time() - strtotime($dt);
+//     if ($diff < 60)     return 'ora';
+//     if ($diff < 3600)   return floor($diff/60) . 'm fa';
+//     if ($diff < 86400)  return floor($diff/3600) . 'h fa';
+//     if ($diff < 604800) return floor($diff/86400) . 'g fa';
+//     return date('d/m/Y', strtotime($dt));
+// }
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -301,7 +301,7 @@ function timeAgo(string $dt): string {
 <nav class="navbar">
     <a href="javascript:history.back()" class="nav-back">←</a>
     <span class="nav-title"><?= htmlspecialchars($post['title_work']) ?></span>
-    <?php if ($post['user_id'] === $currentUserId): ?>
+    <?php if ($post['user_id'] === $currentUserId || $isAdmin): ?>
         <button class="delete-btn" onclick="deletePost(<?= $postId ?>)">🗑 Elimina</button>
     <?php endif; ?>
 </nav>
@@ -400,6 +400,12 @@ function timeAgo(string $dt): string {
                                     Rispondi
                                 </button>
                             <?php endif; ?>
+                            <?php if ($isAdmin): ?>
+                                <button class="reply-btn" style="color:#d85140"
+                                        onclick="adminDeleteComment(<?= $c['id'] ?>, this)">
+                                    🗑 Elimina
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -420,6 +426,12 @@ function timeAgo(string $dt): string {
                             <div class="comment-text"><?= nl2br(htmlspecialchars($r['content'])) ?></div>
                             <div class="comment-meta">
                                 <span class="comment-time"><?= timeAgo($r['created_at']) ?></span>
+                                <?php if ($isAdmin): ?>
+                                    <button class="reply-btn" style="color:#d85140"
+                                            onclick="adminDeleteComment(<?= $r['id'] ?>, this)">
+                                        🗑 Elimina
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -508,62 +520,60 @@ if (textarea) {
     });
 }
 
-// ── ELIMINA POST ──
-// function deletePost(postId) {
-//     if (!confirm('Sei sicuro di voler eliminare questo post?')) return;
-//     fetch('../backend/api/delete_post.php', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ post_id: postId })
-//     })
-//     .then(r => r.json())
-//     .then(data => {
-//         if (data.success) {
-//             window.location.href = 'profile.php?user=<?= urlencode($currentUsername) ?>';
-//         } else {
-//             alert('Errore durante l\'eliminazione.');
-//         }
-//     });
-// }
-/**
- * Funzione per eliminare il post via AJAX
- */
+// ── ELIMINA POST (admin o proprietario) ──
 function deletePost(postId) {
-    // Messaggio di conferma
-    if (!confirm('Sei sicuro di voler eliminare definitivamente questo post? L\'operazione non è reversibile.')) {
-        return;
-    }
+    if (!confirm('Sei sicuro di voler eliminare questo post?')) return;
+    const endpoint = <?= $isAdmin ? 'true' : 'false' ?> && <?= ($post['user_id'] !== $currentUserId) ? 'true' : 'false' ?>
+        ? '/tastegram/backend/api/admin.php'
+        : '/tastegram/backend/api/delete_post.php';
+    const body = endpoint.includes('admin')
+        ? { action: 'delete_post', post_id: postId }
+        : { post_id: postId };
 
-    // Mostriamo un log in console per debug
-    console.log("Invio richiesta eliminazione per il post:", postId);
-
-    fetch('../backend/api/delete_post.php', {
+    fetch(endpoint, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ post_id: postId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
     })
-    .then(response => {
-        // Se il server risponde con un errore di file (es 404 o 500)
-        if (!response.ok) {
-            throw new Error('Errore di connessione al server (Status: ' + response.status + ')');
-        }
-        return response.json();
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) window.location.href = 'feed.php';
+        else alert('Errore: ' + (data.error ?? 'sconosciuto'));
+    });
+}
+
+<?php if ($isAdmin): ?>
+// ── ADMIN: elimina commento ──
+function adminDeleteComment(commentId, btn) {
+    if (!confirm('Eliminare questo commento?')) return;
+    fetch('/tastegram/backend/api/admin.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_comment', comment_id: commentId })
     })
+    .then(r => r.json())
     .then(data => {
         if (data.success) {
-            alert('Post eliminato correttamente.');
-            // Reindirizziamo al feed o al profilo
-            window.location.href = 'feed.php';
+            // Rimuove il div commento dal DOM
+            const card = btn.closest('.comment');
+            if (card) card.remove();
         } else {
-            // Mostriamo l'errore specifico restituito dal PHP
-            alert('Impossibile eliminare: ' + data.error);
+            alert('Errore: ' + (data.error ?? 'sconosciuto'));
         }
+    });
+}
+<?php endif; ?>
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: postId })
     })
-    .catch(error => {
-        console.error('Errore:', error);
-        alert('Si è verificato un errore tecnico. Controlla la console del browser.');
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = 'profile.php?user=<?= urlencode($currentUsername) ?>';
+        } else {
+            alert('Errore durante l\'eliminazione.');
+        }
     });
 }
 </script>

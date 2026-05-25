@@ -10,6 +10,7 @@ CREATE TABLE users (
     password         VARCHAR(255) NOT NULL,
     bio              TEXT,
     avatar_url       VARCHAR(255) DEFAULT 'default_avatar.png',
+    is_admin         INT(1) NOT NULL DEFAULT 0,
     followers_count  INT UNSIGNED DEFAULT 0,
     following_count  INT UNSIGNED DEFAULT 0,
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -85,11 +86,15 @@ CREATE TABLE notifications (
     CONSTRAINT fk_notif_actor FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 8. INSERIMENTO UTENTE OSPITE
+-- 8.  INSERIMENTO UTENTE ADMIN
+INSERT INTO users (username, email, password, bio, is_admin)
+VALUES ('admin', 'admin@tastegram.it', 'tucker59reyer67', 'Amministratore di Tastegram.', 1);
+
+-- 9. INSERIMENTO UTENTE OSPITE
 INSERT INTO users (username, email, password, bio) 
 VALUES ('ospite', 'ospite@tastegram.it', '$2y$10$xyz' , 'Account per visitatori');
 
--- 9. TRIGGER-aggiornano a commento e like il valore dei like e commenti
+-- 10. TRIGGER-aggiornano a commento e like il valore dei like e commenti
 DELIMITER $$
 
 CREATE TRIGGER trg_like_insert AFTER INSERT ON likes FOR EACH ROW
@@ -105,6 +110,11 @@ END$$
 CREATE TRIGGER trg_comment_insert AFTER INSERT ON comments FOR EACH ROW
 BEGIN
     UPDATE posts SET comments_count = comments_count + 1 WHERE id = NEW.post_id;
+END$$
+
+CREATE TRIGGER trg_comment_delete AFTER DELETE ON comments FOR EACH ROW
+BEGIN
+    UPDATE posts SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = OLD.post_id;
 END$$
 
 CREATE TRIGGER trg_follow_insert AFTER INSERT ON follows FOR EACH ROW

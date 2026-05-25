@@ -34,14 +34,14 @@ function userLikedPost(PDO $sql, int $postId, int $userId): bool {
     return (bool) $s->fetchColumn();
 }
 
-function timeAgo(string $datetime): string {
-    $diff = time() - strtotime($datetime);
-    if ($diff < 60)     return 'ora';
-    if ($diff < 3600)   return floor($diff / 60) . 'm';
-    if ($diff < 86400)  return floor($diff / 3600) . 'h';
-    if ($diff < 604800) return floor($diff / 86400) . 'g';
-    return date('d/m/Y', strtotime($datetime));
-}
+// function timeAgo(string $datetime): string {
+//     $diff = time() - strtotime($datetime);
+//     if ($diff < 60)     return 'ora';
+//     if ($diff < 3600)   return floor($diff / 60) . 'm';
+//     if ($diff < 86400)  return floor($diff / 3600) . 'h';
+//     if ($diff < 604800) return floor($diff / 86400) . 'g';
+//     return date('d/m/Y', strtotime($datetime));
+// }
 
 // Notifiche non lette
 $nStmt = $sql->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");

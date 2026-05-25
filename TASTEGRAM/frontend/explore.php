@@ -91,6 +91,14 @@ if ($hasQuery) {
         }
         unset($u);
 
+        foreach ($results as &$u) {
+            $fs = $sql->prepare("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?");
+            $fs->execute([$currentUserId, $u['id']]);
+            $u['is_following'] = (bool) $fs->fetchColumn();
+            $u['is_self']      = false;
+        }
+        unset($u);
+
     } else {
         $stmt = $sql->prepare("
             SELECT p.id, p.title_work, p.image_path, p.likes_count,
@@ -106,14 +114,14 @@ if ($hasQuery) {
     }
 }
 
-function timeAgo(string $dt): string {
-    $diff = time() - strtotime($dt);
-    if ($diff < 60)     return 'ora';
-    if ($diff < 3600)   return floor($diff/60) . 'm fa';
-    if ($diff < 86400)  return floor($diff/3600) . 'h fa';
-    if ($diff < 604800) return floor($diff/86400) . 'g fa';
-    return date('d/m/Y', strtotime($dt));
-}
+// function timeAgo(string $dt): string {
+//     $diff = time() - strtotime($dt);
+//     if ($diff < 60)     return 'ora';
+//     if ($diff < 3600)   return floor($diff/60) . 'm fa';
+//     if ($diff < 86400)  return floor($diff/3600) . 'h fa';
+//     if ($diff < 604800) return floor($diff/86400) . 'g fa';
+//     return date('d/m/Y', strtotime($dt));
+// }
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -341,6 +349,8 @@ function timeAgo(string $dt): string {
 <div class="content-wrap">
 
     <?php if ($tab === 'posts'): ?>
+
+        <!-- SEZIONE LABEL -->
         <div class="section-label">
             <?= $hasQuery
                 ? '🔍 Risultati per "' . htmlspecialchars($query) . '"'
@@ -363,10 +373,12 @@ function timeAgo(string $dt): string {
                         <?php else: ?>
                             <div class="grid-placeholder">🍽️</div>
                         <?php endif; ?>
+
                         <div class="grid-overlay">
                             <span>❤️ <?= $p['likes_count'] ?></span>
                             <span>💬 <?= $p['comments_count'] ?></span>
                         </div>
+
                         <?php if (!empty($p['cuisine_type'])): ?>
                             <div class="grid-badge"><?= htmlspecialchars($p['cuisine_type']) ?></div>
                         <?php endif; ?>
@@ -376,6 +388,8 @@ function timeAgo(string $dt): string {
         <?php endif; ?>
 
     <?php elseif ($tab === 'users'): ?>
+
+        <!-- LISTA UTENTI -->
         <div class="section-label">
             <?= $hasQuery
                 ? '🔍 Utenti trovati per "' . htmlspecialchars($query) . '"'
@@ -417,7 +431,9 @@ function timeAgo(string $dt): string {
             </div>
         <?php endif; ?>
 
-    <?php elseif ($tab === 'news'): ?>
+    <?php endif; ?>
+
+    <?php if ($tab === 'news'): ?>
         <div class="news-lang">
             <button class="lang-btn active" id="lang-it" onclick="setLang('it')">🇮🇹 Italiano</button>
             <button class="lang-btn" id="lang-en" onclick="setLang('en')">🇬🇧 English</button>
@@ -558,8 +574,7 @@ function loadNews(append = false) {
     const c = document.getElementById('news-container');
     if (!append) c.innerHTML = '<div class="news-loading"><div class="spinner"></div><div>Caricamento...</div></div>';
 
-    // fetch(`/tastegram/backend/api/gnews.php?action=food_news&lang=${newsLang}&page=${newsPage}`)
-    fetch(`../backend/api/gnews.php?action=food_news&lang=${newsLang}&page=${newsPage}`)
+    fetch(`/tastegram/backend/api/gnews.php?action=food_news&lang=${newsLang}&page=${newsPage}`)
         .then(r => r.json())
         .then(data => {
             if (data.success) {
